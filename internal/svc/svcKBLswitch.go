@@ -64,6 +64,9 @@ func (k *KBLSwitch) setWinApiHook() {
 				wVirtKey := kbdstruct.VkCode
 				wScanCode := kbdstruct.ScanCode
 				k.user32.GetKeyState(T.VK_SHIFT)
+				var keyStateBuff [256]byte
+				k.user32.GetKeyboardState(&keyStateBuff)
+
 				switch {
 				case wVirtKey == T.VK_PAUSE:
 					// hwnd := k.user32.GetForegroundWindow()
@@ -73,6 +76,7 @@ func (k *KBLSwitch) setWinApiHook() {
 					b.InputType = T.INPUT_KEYBOARD
 					b.Ki.VkCode = T.VK_BACK
 					bufLen := k.swapBuff.DataLen()
+
 					k.isBuffLock = true
 					for i := 0; i < bufLen; i++ {
 						swapChar, ok := k.swapTable[k.swapBuff.Read(i)]
@@ -85,12 +89,14 @@ func (k *KBLSwitch) setWinApiHook() {
 					for i := 0; i < bufLen; i++ {
 						b.Ki.VkCode = 'R' // k.swapBuff.Read(i)
 						k.user32.SendInput(1, &b, b)
+						time.Sleep(time.Millisecond)
 					}
 
 					// utf16char := UTF16.Encode([]rune{k.swapBuff.Read(i)})
 					// fmt.Printf("%c", utf16char[0])
 
 					k.isBuffLock = false
+
 					fmt.Printf("%s\n", k.swapBuff.ToString())
 				case wVirtKey == T.VK_ENTER:
 					k.swapBuff.Clear()
@@ -102,13 +108,17 @@ func (k *KBLSwitch) setWinApiHook() {
 					if (wVirtKey != T.VK_LSHIFT) && (wVirtKey != T.VK_RSHIFT) && (!k.isBuffLock) {
 						const outSize = 1
 						var outBuff [outSize]uint16
-						var keyStateBuff [256]byte
-						k.user32.GetKeyboardState(&keyStateBuff)
 						k.user32.ToUnicodeEx(wVirtKey, wScanCode, &keyStateBuff, &outBuff, outSize, 0, k.checkKBLayout())
 						if outBuff[0] != 0 {
 							k.swapBuff.Set(outBuff[0])
 						}
 						fmt.Printf("%s\n", k.swapBuff.ToString())
+						/* if keyStateBuff[T.VK_SHIFT] > 1 {
+							fmt.Println("SHIFT", keyStateBuff[T.VK_SHIFT])
+						}
+						if keyStateBuff[T.VK_CONTROL] > 1 {
+							fmt.Println("CONTROL", keyStateBuff[T.VK_CONTROL])
+						} */
 					}
 				}
 			}

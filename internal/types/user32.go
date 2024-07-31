@@ -11,6 +11,7 @@ const (
 	VK_BACK                   = 8
 	VK_ENTER                  = 13
 	VK_SHIFT                  = 16
+	VK_CONTROL                = 17
 	VK_LSHIFT                 = 160
 	VK_RSHIFT                 = 161
 	KBLayoutRus               = 68748313
