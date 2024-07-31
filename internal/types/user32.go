@@ -10,6 +10,7 @@ const (
 	VK_PAUSE                  = 19
 	VK_BACK                   = 8
 	VK_ENTER                  = 13
+	VK_SHIFT                  = 16
 	VK_LSHIFT                 = 160
 	VK_RSHIFT                 = 161
 	KBLayoutRus               = 68748313
@@ -25,7 +26,7 @@ type Input struct {
 
 type KBDLLHOOKSTRUCT struct {
 	VkCode      uint16
-	ScanCode    uint32
+	ScanCode    uint16
 	Flags       uint32
 	Time        uint32
 	DwExtraInfo uintptr

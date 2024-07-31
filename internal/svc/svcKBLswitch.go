@@ -63,7 +63,7 @@ func (k *KBLSwitch) setWinApiHook() {
 				kbdstruct := (*T.KBDLLHOOKSTRUCT)(unsafe.Pointer(lparam))
 				wVirtKey := kbdstruct.VkCode
 				wScanCode := kbdstruct.ScanCode
-				k.user32.GetKeyState(T.VK_LSHIFT)
+				k.user32.GetKeyState(T.VK_SHIFT)
 				switch {
 				case wVirtKey == T.VK_PAUSE:
 					// hwnd := k.user32.GetForegroundWindow()
@@ -107,7 +107,14 @@ func (k *KBLSwitch) setWinApiHook() {
 						} */
 						const outSize = 1
 						var outBuff [outSize]uint16
+						var keyStateBuff [256]byte
+						k.user32.GetKeyboardState(&keyStateBuff)
 
+						k.user32.ToUnicodeEx(wVirtKey, wScanCode, &keyStateBuff, &outBuff, outSize, 0, k.checkKBLayout())
+						if outBuff[0] != 0 {
+							k.swapBuff.Set(outBuff[0])
+						}
+						fmt.Printf("%s\n", k.swapBuff.ToString())
 					}
 				}
 			}

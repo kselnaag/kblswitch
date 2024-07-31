@@ -80,8 +80,12 @@ func (u *User32) GetKeyState(keyCode int) uint16 {
 	return uint16(s1)
 }
 
-func (u *User32) ToUnicodeEx(wVirtKey uint16) {
-
+func (u *User32) ToUnicodeEx(wVirtKey uint16, wScanCode uint16, lpKeyState *[256]byte, pwszBuff *[1]uint16, cchBuff int, wFlags uint16, dwhkl uintptr) uint32 {
+	u1, _, e := procToUnicodeEx.Call(uintptr(wVirtKey), uintptr(wScanCode), uintptr(unsafe.Pointer(lpKeyState)), uintptr(unsafe.Pointer(pwszBuff)), uintptr(cchBuff), uintptr(wFlags), dwhkl)
+	if e != nil && e.Error() != ErrSuccessfull {
+		u.log.LogError(e, "user32.ToUnicodeEx() error")
+	}
+	return uint32(u1)
 }
 
 func (u *User32) PostMessageA(hwnd uintptr, msg int, wparam uintptr, lparam uintptr) bool {
