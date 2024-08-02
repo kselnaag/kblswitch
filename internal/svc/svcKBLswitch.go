@@ -3,7 +3,7 @@ package svc
 import (
 	"fmt"
 	T "kblswitch/internal/types"
-	U32 "kblswitch/internal/user32"
+	"kblswitch/internal/winapi"
 	"time"
 	"unsafe"
 )
@@ -12,17 +12,20 @@ var _ T.ISvc = (*KBLSwitch)(nil)
 
 type KBLSwitch struct {
 	log        T.ILog
-	user32     *U32.User32
+	user32     *winapi.User32
+	kernel32   *winapi.Kernel32
 	swapTable  map[uint16]uint16
 	swapBuff   *RingBuff[uint16]
 	isBuffLock bool
 }
 
 func NewKBLSwitch(log T.ILog) *KBLSwitch {
-	user32 := U32.NewUser32(log)
+	user32 := winapi.NewUser32(log)
+	kernel32 := winapi.NewKernel32(log)
 	return &KBLSwitch{
 		log:        log,
 		user32:     user32,
+		kernel32:   kernel32,
 		swapTable:  *makeSwapTable(),
 		swapBuff:   NewRingBuff[uint16](10),
 		isBuffLock: false,
@@ -31,6 +34,7 @@ func NewKBLSwitch(log T.ILog) *KBLSwitch {
 
 func (k *KBLSwitch) Start() {
 	k.setWinApiHook()
+	k.kernel32.GetCurrentThreadId()
 }
 
 func (k *KBLSwitch) KeepAlive() {
@@ -97,8 +101,12 @@ func (k *KBLSwitch) setWinApiHook() {
 					}
 					k.isBuffLock = false
 					fmt.Printf("%s\n", k.swapBuff.ToString())
-				case wVirtKey == T.VK_ENTER:
+				case wVirtKey == T.VK_ENTER: // PAUSE - textSwitch, CTRL+PAUSE - textSwitch from OS buffer(Ctrl+C), ENTER - dropBuff, SHIFT+ESC - quit,
 					k.swapBuff.Clear()
+				case wVirtKey == T.VK_ESCAPE:
+					if keyStateBuff[T.VK_SHIFT] > 1 {
+						k.user32.PostThreadMessageA(k.kernel32.CurrThreadId, T.WM_QUIT, 0, 0)
+					}
 				case wVirtKey == T.VK_BACK:
 					if !k.isBuffLock {
 						k.swapBuff.Back()
