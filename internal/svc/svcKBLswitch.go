@@ -74,9 +74,11 @@ func (k *KBLSwitch) setWinApiHook() {
 
 					var b T.Input
 					b.InputType = T.INPUT_KEYBOARD
+					b.Ki.Flags = 0
 					b.Ki.VkCode = T.VK_BACK
-					bufLen := k.swapBuff.DataLen()
+					b.Ki.ScanCode = 0
 
+					bufLen := k.swapBuff.DataLen()
 					k.isBuffLock = true
 					for i := 0; i < bufLen; i++ {
 						swapChar, ok := k.swapTable[k.swapBuff.Read(i)]
@@ -86,17 +88,14 @@ func (k *KBLSwitch) setWinApiHook() {
 						k.user32.SendInput(1, &b, b)
 						time.Sleep(time.Millisecond)
 					}
+					b.Ki.Flags = T.KEYEVENTF_UNICODE
+					b.Ki.VkCode = 0
 					for i := 0; i < bufLen; i++ {
-						b.Ki.VkCode = 'R' // k.swapBuff.Read(i)
+						b.Ki.ScanCode = k.swapBuff.Read(i)
 						k.user32.SendInput(1, &b, b)
 						time.Sleep(time.Millisecond)
 					}
-
-					// utf16char := UTF16.Encode([]rune{k.swapBuff.Read(i)})
-					// fmt.Printf("%c", utf16char[0])
-
 					k.isBuffLock = false
-
 					fmt.Printf("%s\n", k.swapBuff.ToString())
 				case wVirtKey == T.VK_ENTER:
 					k.swapBuff.Clear()

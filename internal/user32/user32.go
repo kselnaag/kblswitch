@@ -24,6 +24,7 @@ var (
 	procGetKeyboardState         = user32.NewProc("GetKeyboardState")
 	procToUnicodeEx              = user32.NewProc("ToUnicodeEx")
 	procGetKeyState              = user32.NewProc("GetKeyState")
+	procVkKeyScanExA             = user32.NewProc("VkKeyScanExA")
 )
 
 const ErrSuccessfull = "The operation completed successfully."
@@ -110,6 +111,14 @@ func (u *User32) SendInput(cinputs int, pinput *T.Input, cbSize T.Input) uint {
 		u.log.LogError(e, "user32.SendInput() error")
 	}
 	return uint(i1)
+}
+
+func (u *User32) VkKeyScanExA(char uint8, dwhkl uintptr) uint16 {
+	s1, _, e := procVkKeyScanExA.Call(uintptr(char), dwhkl)
+	if e != nil && e.Error() != ErrSuccessfull {
+		u.log.LogError(e, "user32.VkKeyScanExA() error")
+	}
+	return uint16(s1)
 }
 
 func (u *User32) SetWindowsHookExA(idHook int, lpfn T.HOOKPROC, hMod int, dwThreadId int) uintptr {

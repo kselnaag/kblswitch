@@ -17,6 +17,7 @@ const (
 	KBLayoutRus               = 68748313
 	KBLayoutEng               = 67699721
 	KEYEVENTF_KEYUP           = 2
+	KEYEVENTF_UNICODE         = 4
 )
 
 type Input struct {
