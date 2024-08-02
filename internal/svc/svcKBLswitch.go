@@ -57,7 +57,7 @@ func (k *KBLSwitch) checkKBLayout() uintptr {
 }
 
 func (k *KBLSwitch) unsetWinApiHook() {
-	k.user32.UnhookWindowsHookEx(k.user32.KeyboardHookId)
+	k.user32.UnhookWindowsHookEx(k.user32.KBHookId)
 }
 
 func (k *KBLSwitch) setWinApiHook() {
@@ -78,12 +78,12 @@ func (k *KBLSwitch) setWinApiHook() {
 
 					var b T.Input
 					b.InputType = T.INPUT_KEYBOARD
-					b.Ki.Flags = 0
 					b.Ki.VkCode = T.VK_BACK
 					b.Ki.ScanCode = 0
+					b.Ki.Flags = 0
 
-					bufLen := k.swapBuff.DataLen()
 					k.isBuffLock = true
+					bufLen := k.swapBuff.DataLen()
 					for i := 0; i < bufLen; i++ {
 						swapChar, ok := k.swapTable[k.swapBuff.Read(i)]
 						if ok {
@@ -100,8 +100,8 @@ func (k *KBLSwitch) setWinApiHook() {
 						time.Sleep(time.Millisecond)
 					}
 					k.isBuffLock = false
-					fmt.Printf("%s\n", k.swapBuff.ToString())
-				case wVirtKey == T.VK_ENTER: // PAUSE - textSwitch, CTRL+PAUSE - textSwitch from OS buffer(Ctrl+C), ENTER - dropBuff, SHIFT+ESC - quit,
+					fmt.Printf("%s\n", k.swapBuff.ToString()) // ENTER - dropBuff, SHIFT+ESC - quit, PAUSE - textSwitch, CTRL+PAUSE - textSwitch from OS buffer(Ctrl+C)
+				case wVirtKey == T.VK_ENTER:
 					k.swapBuff.Clear()
 				case wVirtKey == T.VK_ESCAPE:
 					if keyStateBuff[T.VK_SHIFT] > 1 {
@@ -129,6 +129,6 @@ func (k *KBLSwitch) setWinApiHook() {
 					}
 				}
 			}
-			return k.user32.CallNextHookEx(k.user32.KeyboardHookId, nCode, wparam, lparam)
+			return k.user32.CallNextHookEx(k.user32.KBHookId, nCode, wparam, lparam)
 		}), 0, 0)
 }

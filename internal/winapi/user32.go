@@ -29,14 +29,14 @@ var (
 )
 
 type User32 struct {
-	log            T.ILog
-	KeyboardHookId uintptr
+	log      T.ILog
+	KBHookId uintptr
 }
 
 func NewUser32(log T.ILog) *User32 {
 	return &User32{
-		log:            log,
-		KeyboardHookId: 0,
+		log:      log,
+		KBHookId: 0,
 	}
 }
 
@@ -122,7 +122,7 @@ func (u *User32) VkKeyScanExA(char uint8, dwhkl uintptr) uint16 {
 
 func (u *User32) SetWindowsHookExA(idHook int, lpfn T.HOOKPROC, hMod int, dwThreadId int) uintptr {
 	h1, _, e := procSetWindowsHookExA.Call(uintptr(idHook), syscall.NewCallback(lpfn), uintptr(hMod), uintptr(dwThreadId))
-	u.KeyboardHookId = h1
+	u.KBHookId = h1
 	if e != nil && e.Error() != T.ErrSuccessfull {
 		u.log.LogError(e, "user32.SetWindowsHookExA() error")
 	}

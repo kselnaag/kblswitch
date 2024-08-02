@@ -54,6 +54,8 @@ type POINT struct {
 type HOOKPROC func(int, uintptr, uintptr) uintptr
 
 type (
+	SHORT     uint16
+	WORD      uint16
 	DWORD     uint32
 	WPARAM    uintptr
 	LPARAM    uintptr
