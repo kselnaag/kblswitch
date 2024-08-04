@@ -1,7 +1,6 @@
 package svc
 
 import (
-	"fmt"
 	T "kblswitch/internal/types"
 	"kblswitch/internal/winapi"
 	"time"
@@ -27,7 +26,7 @@ func NewKBLSwitch(log T.ILog) *KBLSwitch {
 		user32:     user32,
 		kernel32:   kernel32,
 		swapTable:  *makeSwapTable(),
-		swapBuff:   NewRingBuff[uint16](10),
+		swapBuff:   NewRingBuff[uint16](1024),
 		isBuffLock: false,
 	}
 }
@@ -71,10 +70,10 @@ func (k *KBLSwitch) setWinApiHook() {
 				var keyStateBuff [256]byte
 				k.user32.GetKeyboardState(&keyStateBuff)
 
-				switch {
+				switch { // ENTER - dropBuff, SHIFT+ESC - quit, PAUSE - textSwitch, CTRL+PAUSE - textSwitch from OS buffer(Ctrl+C)
 				case wVirtKey == T.VK_PAUSE:
-					// hwnd := k.user32.GetForegroundWindow()
-					// k.user32.PostMessageA(hwnd, T.WM_INPUTLANGCHANGEREQUEST, 0, 0)
+					hwnd := k.user32.GetForegroundWindow()
+					k.user32.PostMessageA(hwnd, T.WM_INPUTLANGCHANGEREQUEST, 0, 0)
 
 					var b T.Input
 					b.InputType = T.INPUT_KEYBOARD
@@ -89,18 +88,19 @@ func (k *KBLSwitch) setWinApiHook() {
 						if ok {
 							k.swapBuff.Change(i, swapChar)
 						}
+						time.Sleep(10 * time.Millisecond)
 						k.user32.SendInput(1, &b, b)
-						time.Sleep(time.Millisecond)
 					}
+					time.Sleep(100 * time.Millisecond)
 					b.Ki.Flags = T.KEYEVENTF_UNICODE
 					b.Ki.VkCode = 0
 					for i := 0; i < bufLen; i++ {
 						b.Ki.ScanCode = k.swapBuff.Read(i)
+						time.Sleep(10 * time.Millisecond)
 						k.user32.SendInput(1, &b, b)
-						time.Sleep(time.Millisecond)
 					}
 					k.isBuffLock = false
-					fmt.Printf("%s\n", k.swapBuff.ToString()) // ENTER - dropBuff, SHIFT+ESC - quit, PAUSE - textSwitch, CTRL+PAUSE - textSwitch from OS buffer(Ctrl+C)
+					// fmt.Printf("%s\n", k.swapBuff.ToString())
 				case wVirtKey == T.VK_ENTER:
 					k.swapBuff.Clear()
 				case wVirtKey == T.VK_ESCAPE:
@@ -119,7 +119,7 @@ func (k *KBLSwitch) setWinApiHook() {
 						if outBuff[0] != 0 {
 							k.swapBuff.Set(outBuff[0])
 						}
-						fmt.Printf("%s\n", k.swapBuff.ToString())
+						// fmt.Printf("%s\n", k.swapBuff.ToString())
 						/* if keyStateBuff[T.VK_SHIFT] > 1 {
 							fmt.Println("SHIFT", keyStateBuff[T.VK_SHIFT])
 						}

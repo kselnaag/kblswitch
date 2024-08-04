@@ -12,7 +12,7 @@ type App struct {
 }
 
 func NewApp() *App {
-	log := L.NewLogFprintf("kblswitch", "TRACE")
+	log := L.NewLogFprintf("kblswitch", "WARN")
 	svc := S.NewKBLSwitch(log)
 	return &App{
 		log: log,
