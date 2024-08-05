@@ -3,6 +3,7 @@ package svc
 import (
 	T "kblswitch/internal/types"
 	"kblswitch/internal/winapi"
+	"sync/atomic"
 	"time"
 	"unsafe"
 )
@@ -15,7 +16,7 @@ type KBLSwitch struct {
 	kernel32   *winapi.Kernel32
 	swapTable  map[uint16]uint16
 	swapBuff   *RingBuff[uint16]
-	isBuffLock bool
+	isBuffLock atomic.Bool
 }
 
 func NewKBLSwitch(log T.ILog) *KBLSwitch {
@@ -27,7 +28,7 @@ func NewKBLSwitch(log T.ILog) *KBLSwitch {
 		kernel32:   kernel32,
 		swapTable:  *makeSwapTable(),
 		swapBuff:   NewRingBuff[uint16](1024),
-		isBuffLock: false,
+		isBuffLock: atomic.Bool{},
 	}
 }
 
@@ -70,36 +71,37 @@ func (k *KBLSwitch) setWinApiHook() {
 				var keyStateBuff [256]byte
 				k.user32.GetKeyboardState(&keyStateBuff)
 
-				switch { // ENTER - dropBuff, SHIFT+ESC - quit, PAUSE - textSwitch, CTRL+PAUSE - textSwitch from OS buffer(Ctrl+C)
+				switch { // ENTER - dropBuff, SHIFT+ESC - quit, PAUSE - textSwitch, CTRL+PAUSE(?) - textSwitch from OS buffer(Ctrl+C)
 				case wVirtKey == T.VK_PAUSE:
-					hwnd := k.user32.GetForegroundWindow()
-					k.user32.PostMessageA(hwnd, T.WM_INPUTLANGCHANGEREQUEST, 0, 0)
+					k.isBuffLock.Store(true)
 
 					var b T.Input
 					b.InputType = T.INPUT_KEYBOARD
 					b.Ki.VkCode = T.VK_BACK
 					b.Ki.ScanCode = 0
 					b.Ki.Flags = 0
-
-					k.isBuffLock = true
 					bufLen := k.swapBuff.DataLen()
 					for i := 0; i < bufLen; i++ {
 						swapChar, ok := k.swapTable[k.swapBuff.Read(i)]
 						if ok {
 							k.swapBuff.Change(i, swapChar)
 						}
-						time.Sleep(10 * time.Millisecond)
 						k.user32.SendInput(1, &b, b)
+						time.Sleep(10 * time.Millisecond)
 					}
-					time.Sleep(100 * time.Millisecond)
+					// time.Sleep(100 * time.Millisecond)
 					b.Ki.Flags = T.KEYEVENTF_UNICODE
 					b.Ki.VkCode = 0
 					for i := 0; i < bufLen; i++ {
 						b.Ki.ScanCode = k.swapBuff.Read(i)
-						time.Sleep(10 * time.Millisecond)
 						k.user32.SendInput(1, &b, b)
+						time.Sleep(10 * time.Millisecond)
 					}
-					k.isBuffLock = false
+
+					hwnd := k.user32.GetForegroundWindow()
+					k.user32.PostMessageA(hwnd, T.WM_INPUTLANGCHANGEREQUEST, 0, 0)
+
+					k.isBuffLock.Store(false)
 					// fmt.Printf("%s\n", k.swapBuff.ToString())
 				case wVirtKey == T.VK_ENTER:
 					k.swapBuff.Clear()
@@ -108,11 +110,11 @@ func (k *KBLSwitch) setWinApiHook() {
 						k.user32.PostThreadMessageA(k.kernel32.CurrThreadId, T.WM_QUIT, 0, 0)
 					}
 				case wVirtKey == T.VK_BACK:
-					if !k.isBuffLock {
+					if !k.isBuffLock.Load() {
 						k.swapBuff.Back()
 					}
 				default:
-					if (wVirtKey != T.VK_LSHIFT) && (wVirtKey != T.VK_RSHIFT) && (!k.isBuffLock) {
+					if (wVirtKey != T.VK_LSHIFT) && (wVirtKey != T.VK_RSHIFT) && (!k.isBuffLock.Load()) {
 						const outSize = 1
 						var outBuff [outSize]uint16
 						k.user32.ToUnicodeEx(wVirtKey, wScanCode, &keyStateBuff, &outBuff, outSize, 0, k.checkKBLayout())
@@ -120,15 +122,16 @@ func (k *KBLSwitch) setWinApiHook() {
 							k.swapBuff.Set(outBuff[0])
 						}
 						// fmt.Printf("%s\n", k.swapBuff.ToString())
-						/* if keyStateBuff[T.VK_SHIFT] > 1 {
-							fmt.Println("SHIFT", keyStateBuff[T.VK_SHIFT])
-						}
-						if keyStateBuff[T.VK_CONTROL] > 1 {
-							fmt.Println("CONTROL", keyStateBuff[T.VK_CONTROL])
-						} */
 					}
 				}
 			}
 			return k.user32.CallNextHookEx(k.user32.KBHookId, nCode, wparam, lparam)
 		}), 0, 0)
 }
+
+/* if keyStateBuff[T.VK_SHIFT] > 1 {
+	fmt.Println("SHIFT", keyStateBuff[T.VK_SHIFT])
+}
+if keyStateBuff[T.VK_CONTROL] > 1 {
+	fmt.Println("CONTROL", keyStateBuff[T.VK_CONTROL])
+} */
