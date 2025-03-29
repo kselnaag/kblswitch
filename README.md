@@ -1,6 +1,7 @@
 ### **KBLSWITCH** 📏 keyboard switch layout
 
-> [!WARNING]  Under construction  [!WARNING]
+> [!WARNING]  
+> Under construction
 
 ----
 ### **🔗 LINKS**
