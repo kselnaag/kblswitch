@@ -67,9 +67,9 @@ func (k *KBLSwitch) setWinApiHook() {
 				kbdstruct := (*T.KBDLLHOOKSTRUCT)(unsafe.Pointer(lparam))
 				wVirtKey := kbdstruct.VkCode
 				wScanCode := kbdstruct.ScanCode
-				k.user32.GetKeyState(T.VK_SHIFT)
 				var keyStateBuff [256]byte
 				k.user32.GetKeyboardState(&keyStateBuff)
+				k.user32.GetKeyState(T.VK_SHIFT)
 
 				switch { // ENTER - dropBuff, SHIFT+ESC - quit, PAUSE - textSwitch, CTRL+PAUSE(?) - textSwitch from OS buffer(Ctrl+C)
 				case wVirtKey == T.VK_PAUSE:
